@@ -15,20 +15,19 @@ class String
 end
 
 class Yahtzee
-  attr_accessor :dice, :sheet, :message
+  attr_accessor :dice, :sheet, :messages
   attr_writer :started
 
   def initialize
     @dice = DiceSet.new(self)
     @sheet = ScoreSheet.new(self)
-    @started = false
-    @message = ""
+    @messages = []
   end
 
   def header
     out = <<~HEADER
 
-      * —— TERMINAL YAHTZEE —— *
+             \e[1m* —— TERMINAL YAHTZEE —— *\e[0m
 
       SPACE to roll dice, NUMBERS 1-5 to select-deselect dice,
       ARROWS to navigate scoresheet, ENTER to confirm combo,
@@ -38,22 +37,25 @@ class Yahtzee
     out.win_center
   end
 
+  def turn_started?
+    @dice.turn_started?
+  end
+
   def redraw_screen
     $stdout.clear_screen
     puts header
     puts @sheet.possible_scores
     puts @dice
-  end
-
-  # @return [Boolean]
-  def started?
-    @started
+    puts
+    puts @messages.join("\n")
+    @messages.clear
   end
 
   def run
     redraw_screen
     loop do
       char = $stdin.getch
+      p char
 
       if char == "\e"
         next_chars = begin
@@ -84,6 +86,9 @@ class Yahtzee
           redraw_screen
         when "1", "2", "3", "4", "5"
           @dice.dice[char.to_i - 1].toggle_keep
+          redraw_screen
+        when "\r"
+          @sheet.enter_combo
           redraw_screen
         when "q"
           puts "Exiting..."

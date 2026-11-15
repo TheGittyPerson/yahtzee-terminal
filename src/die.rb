@@ -83,7 +83,7 @@ class Die
   end
 
   def keep
-    @keep = true if @yahtzee.started?
+    @keep = true if @yahtzee.turn_started?
   end
 
   def unkeep

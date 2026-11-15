@@ -20,6 +20,8 @@ class ScoreSheet
     grand_total: "g-"
   }.freeze
 
+  attr_accessor :showing_possible_scores
+
   # @param [Yahtzee]
   def initialize(yahtzee)
     @yahtzee = yahtzee
@@ -42,6 +44,9 @@ class ScoreSheet
       }
     }
     @current_player = 1
+    @showing_possible_scores = false
+
+    @selected_section = [0, 0]
   end
 
   def sheet_template
@@ -143,32 +148,38 @@ class ScoreSheet
 
   # A string of the scoresheet with all possible scores filled in for the
   # current player.
-  # @return [Integer]
+  # @return [String]
   def possible_scores
-    temp_sheet = sheet_template
+    temp_sheet = to_s(remove_remaining_placeholders: false)
 
-    if @yahtzee.started?
+    if @yahtzee.turn_started?
       bonuses = { upper_bonus: upper_bonus, yahtzee_bonus: yahtzee_bonus }
       @dice_set.combos.merge(bonuses).each_pair do |key, value|
         temp_sheet = fill_possible(temp_sheet, @current_player, key, value)
       end
     end
-    temp_sheet.gsub(/%[1-2][a-zA-Z0-9]/, "   ")
-              .gsub(/%[1-2][a-zA-Z0-9]-/, "    ")
+    temp_sheet.gsub(/%[1-2][a-zA-Z0-9]-/, "    ")
+              .gsub(/%[1-2][a-zA-Z0-9]/, "   ")
   end
 
-  def to_s
+  # Set +remove_remaining_placeholders+ to false when using in #possible_scores
+  # @param remove_remaining_placeholders [Boolean]
+  def to_s(remove_remaining_placeholders: true)
     temp_sheet = sheet_template
 
-    if @yahtzee.started?
+    if @yahtzee.turn_started?
       @scores.each_pair do |player, scores|
         scores.each_pair do |key, value|
           next if value.nil?
           temp_sheet = fill_field(temp_sheet, player[-1].to_i, key, value)
         end
       end
-      temp_sheet.gsub(/%[1-2][a-zA-Z0-9]/, "   ")
-                .gsub(/%[1-2][a-zA-Z0-9]-/, "    ")
     end
+    if remove_remaining_placeholders
+      temp_sheet = temp_sheet.gsub(/%[1-2][a-zA-Z0-9]-/, "    ")
+                             .gsub(/%[1-2][a-zA-Z0-9]/, "   ")
+    end
+    temp_sheet.gsub("P.1", "\e[1m\e[31mP.1\e[0m")
+              .gsub("P.2", "\e[1m\e[34mP.2\e[0m")
   end
 end

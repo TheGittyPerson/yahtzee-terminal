@@ -13,20 +13,26 @@ class String
 end
 
 class DiceSet
-  attr_reader :dice, :roles
+  attr_reader :dice, :roles_left
 
   # @param [Yahtzee]
   def initialize(yahtzee)
     @yahtzee = yahtzee
-    @dice = [Die.new(yahtzee), Die.new(yahtzee),
-             Die.new(yahtzee), Die.new(yahtzee), Die.new(yahtzee)]
-    @roles = 0
+    @dice = Array.new(5) { Die.new(@yahtzee) }
+    @roles_left = 3
+    @turn_started = false
   end
 
-  # Unkeep and reset each die to nil
+  # Unkeep and reset each die to +nil+.
   def reset
     @dice.each(&:reset)
-    @roles = 0
+    @roles_left = 3
+    @turn_started = false
+  end
+
+  # @return [String]
+  def roles_left_indicator
+    "\n" + (["    🎲"] * @roles_left).join("\n") + ("\n" * (5 - @roles_left))
   end
 
   # @return [String]
@@ -35,7 +41,7 @@ class DiceSet
       @dice.each do |die|
         line += "#{die.to_s.lines[index].chomp} "
       end
-      line.strip
+      line.strip + roles_left_indicator.lines[index].chomp
     end.join("\n")
   end
 
@@ -46,10 +52,18 @@ class DiceSet
   end
 
   def roll
+    if @roles_left == 0
+      @yahtzee.messages << "No more roles!"
+      return
+    end
     return if @dice.map(&:kept?).all?
+    @turn_started = true
     @dice.each(&:roll)
-    @roles += 1 unless @roles >= 3
-    @yahtzee.started = true
+    @roles_left -= 1
+  end
+
+  def turn_started?
+    @turn_started
   end
 
   # Tallies die numbers in a Hash.
@@ -63,10 +77,11 @@ class DiceSet
   # keys: +:aces+, +:twos+, +:threes+, +:fours+, +:fives+, +:sixes+,
   # +:three_of_a_kind+, +:four_of_a_kind+, +:full_house+, +:small_straight+,
   # +:large_straight+, +:yahtzee+, +:chance+
-  # Returns empty hash if the dice have not been rolled yet.
+  # Returns empty hash if the dice have not been rolled yet (turn has not
+  # started yet).
   # @return [Hash{Symbol => Integer}]
   def combos
-    return {} unless @yahtzee.started?
+    return {} unless @yahtzee.turn_started?
     {
       aces: die_nums.count { |d| d == 1 },
       twos: die_nums.count { |d| d == 2 } * 2,
