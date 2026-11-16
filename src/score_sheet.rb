@@ -117,28 +117,33 @@ class ScoreSheet
       self.selected_x = (selected_x + dx) % cols
       self.selected_y = (selected_y + dy) % rows
 
-      break if selected_field && current_player_score(selected_field).nil?
+      break if selected_field && player_score(selected_field).nil?
     end
   end
 
-  # Get score for current player.
+  # Get score for specified player, defaults to current player.
   # @param field [Symbol]
+  # @param player_num [Integer]
   # @return [Integer]
-  def current_player_score(field)
+  def player_score(field, player_num = @current_player)
     unless VALID_FIELDS.include? field
       raise ArgumentError, "Invalid field: #{field.inspect}"
     end
-    @scores[@current_player][field]
+    @scores[player_num][field]
   end
 
-  def set_current_player_score(field, value)
+  # Set a score for the specified player, defaults to current player.
+  # @param field [Symbol]
+  # @param player_num [Integer]
+  # @param value [Integer]
+  def set_player_score(field, value, player_num = @current_player)
     unless VALID_FIELDS.include? field
       raise ArgumentError, "Invalid field: #{field.inspect}"
     end
     unless value.is_a? Integer
       raise ArgumentError, "Expected Integer for value, got #{value.class}"
     end
-    @scores[@current_player][field] = value
+    @scores[player_num][field] = value
   end
 
   # Should be called when the user presses Enter.
@@ -179,7 +184,7 @@ class ScoreSheet
 
     found = (neighbors + all_coords).find do |y, x|
       combo = GRID_COMBO_NAMES[y][x]
-      combo && current_player_score(combo).nil?
+      combo && player_score(combo).nil?
     end
 
     self.selected_y, self.selected_x = found if found
@@ -193,7 +198,7 @@ class ScoreSheet
       raise ArgumentError, "Invalid field: #{field.inspect}"
     end
 
-    set_current_player_score(field, value)
+    set_player_score(field, value)
   end
 
   # Fill a field in the +sheet_template+ with a value and return the resulting
@@ -344,12 +349,33 @@ class ScoreSheet
   # scored a Yahtzee yet, in which case it returns 0.
   # @return [Integer]
   def yahtzee_bonus
-    if (current_player_score(:yahtzee) || 0) >= 50 &&
+    if (player_score(:yahtzee) || 0) >= 50 &&
        @dice.combos[:yahtzee] == 50
-      current_player_score(:yahtzee) + 100
+      player_score(:yahtzee) + 100
     else
       0
     end
+  end
+
+  # Returns the winner of the game, or nil if it's a tie.
+  # @return [Integer, nil]
+  def winner
+    if grand_total(1) > grand_total(2)
+      1
+    elsif grand_total(2) > grand_total(1)
+      2
+    end
+  end
+  
+  # Returns the grand total for the specified player, or the current player
+  # if no argument is given.
+  # @param player_num [Integer]
+  # @return [Integer]
+  def grand_total(player_num = @current_player)
+    player_score(:upper_total, player_num) +
+      player_score(:lower_total, player_num) +
+      player_score(:upper_bonus, player_num) +
+      player_score(:yahtzee_bonus, player_num)
   end
 
   # Player num defaults to current player.

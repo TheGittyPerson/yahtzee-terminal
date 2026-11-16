@@ -124,7 +124,12 @@ class Yahtzee
     add_message(
       "FINAL SCORES: #{@sheet.grand_total(1)} - #{@sheet.grand_total(2)}"
     )
-    add_message "Player #{@sheet.winner} wins! 👑"
+    winner = @sheet.winner
+    if winner.nil?
+      add_message "It's a tie! 🤝"
+    else
+      add_message "Player #{winner} wins! 👑"
+    end
     redraw_screen
 
     @yahtzee.add_message "Play again?"
