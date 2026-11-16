@@ -4,6 +4,7 @@ require "rainbow/refinement"
 
 using Rainbow
 
+# Represents a single die in the Yahtzee game.
 class Die
   include Comparable
 

@@ -3,15 +3,12 @@
 require "rainbow/refinement"
 
 require_relative "die"
+require_relative "valid_fields"
 
 using Rainbow
 
-class String
-  def win_center
-    lines.map { |line| line.chomp.center($stdout.winsize.last) }.join "\n"
-  end
-end
-
+# Controls the dice and their rolls.
+# Keeps track of how many rolls are left in a turn.
 class DiceSet
   attr_reader :dice, :roles_left
 
@@ -52,8 +49,8 @@ class DiceSet
   end
 
   def roll
-    if @roles_left == 0
-      @yahtzee.messages << "No more roles!"
+    if @roles_left.zero?
+      @yahtzee.add_message "No more roles!"
       return
     end
     return if @dice.map(&:kept?).all?
@@ -72,6 +69,16 @@ class DiceSet
     die_nums.tally
   end
 
+  # Get the score for a combo.
+  # Raises an ArgumentError on an invalid field. Returns nil if turn hasn't
+  # started yet.
+  # @param field [Symbol]
+  # @return [Integer]
+  def score_for_combo(field)
+    check_field field
+    combos[field]
+  end
+
   # Return a Hash of points awarded for all categories (combos), NOT including
   # bonuses and totals.
   # keys: +:aces+, +:twos+, +:threes+, +:fours+, +:fives+, +:sixes+,
@@ -81,7 +88,7 @@ class DiceSet
   # started yet).
   # @return [Hash{Symbol => Integer}]
   def combos
-    return {} unless @yahtzee.turn_started?
+    return {} unless turn_started?
     {
       aces: die_nums.count { |d| d == 1 },
       twos: die_nums.count { |d| d == 2 } * 2,
@@ -112,5 +119,11 @@ class DiceSet
       yahtzee: die_nums.uniq.length == 1 ? 50 : 0,
       chance: die_nums.sum
     }
+  end
+end
+
+class String
+  def win_center
+    lines.map { |line| line.chomp.center($stdout.winsize.last) }.join "\n"
   end
 end
